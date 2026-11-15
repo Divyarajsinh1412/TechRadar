@@ -1,0 +1,512 @@
+/* ==========================================================================
+   TechRadar — Premium SaaS Dark Theme Stylesheet
+   Design Inspiration: Vercel, Linear, Datadog & Modern BI Platforms
+   ========================================================================== */
+
+/* ----------------- Root CSS Variables ----------------- */
+:root {
+    --bg-page: #080d1a;
+    --bg-surface: #0f172a;
+    --bg-card: #131c31;
+    --bg-card-hover: #18233c;
+    --bg-sidebar: #0b1120;
+    
+    --border-subtle: #1e293b;
+    --border-card: #22304d;
+    --border-focus: #38bdf8;
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    
+    --accent-cyan: #38bdf8;
+    --accent-blue: #0ea5e9;
+    --accent-indigo: #6366f1;
+    --accent-purple: #8b5cf6;
+    --accent-emerald: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-rose: #f43f5e;
+    
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-pill: 9999px;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+}
+
+/* ----------------- Global Body & Container ----------------- */
+.stApp {
+    background-color: var(--bg-page) !important;
+    color: var(--text-primary) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* Fix Excessive Empty Top Header Area */
+.block-container {
+    padding-top: 1.25rem !important;
+    padding-bottom: 2.5rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    max-width: 1440px !important;
+}
+
+header[data-testid="stHeader"] {
+    background-color: transparent !important;
+    height: 2.25rem !important;
+}
+
+/* ----------------- Compact Sidebar Redesign ----------------- */
+[data-testid="stSidebar"] {
+    background-color: var(--bg-sidebar) !important;
+    border-right: 1px solid var(--border-subtle) !important;
+    min-width: 260px !important;
+    max-width: 280px !important;
+    padding-top: 1rem !important;
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    padding-top: 1rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+/* Sidebar Branding Card */
+.sidebar-brand-container {
+    padding: 0.85rem 1rem;
+    background: linear-gradient(145deg, #131c31 0%, #0c1322 100%);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.25rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.brand-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.brand-icon {
+    font-size: 1.6rem;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: var(--radius-sm);
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brand-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.brand-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+}
+
+.brand-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    line-height: 1.35;
+}
+
+/* Sidebar Footer */
+.sidebar-footer-container {
+    margin-top: 2rem;
+    padding: 0.75rem 0.5rem;
+}
+
+.footer-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin-bottom: 0.75rem;
+}
+
+.footer-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+/* Sidebar Navigation Items */
+[data-testid="stSidebarNav"] {
+    padding-top: 0.5rem;
+}
+
+[data-testid="stSidebarNav"] li a {
+    border-radius: var(--radius-sm) !important;
+    padding: 0.45rem 0.75rem !important;
+    margin-bottom: 0.2rem !important;
+    font-size: 0.88rem !important;
+    font-weight: 500 !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.15s ease-in-out !important;
+}
+
+[data-testid="stSidebarNav"] li a:hover {
+    background-color: var(--bg-card) !important;
+    color: #ffffff !important;
+}
+
+[data-testid="stSidebarNav"] li a[aria-current="page"] {
+    background: linear-gradient(90deg, rgba(56, 189, 248, 0.15) 0%, rgba(56, 189, 248, 0.05) 100%) !important;
+    color: var(--accent-cyan) !important;
+    border-left: 3px solid var(--accent-cyan) !important;
+    font-weight: 600 !important;
+}
+
+/* ----------------- Page Header Component ----------------- */
+.page-header-container {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.header-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.4rem;
+}
+
+.page-title {
+    font-size: 1.85rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    letter-spacing: -0.025em !important;
+    margin: 0.2rem 0 !important;
+    line-height: 1.2 !important;
+}
+
+.page-subtitle {
+    font-size: 0.95rem !important;
+    color: var(--text-secondary) !important;
+    margin: 0 !important;
+    font-weight: 400 !important;
+}
+
+.academic-badge {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    border-radius: var(--radius-pill);
+    background-color: rgba(56, 189, 248, 0.12);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: var(--radius-pill);
+    background-color: rgba(16, 185, 129, 0.12);
+    color: var(--accent-emerald);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* ----------------- SaaS Responsive KPI Cards ----------------- */
+.kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.15rem;
+    min-height: 115px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 0.75rem;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(56, 189, 248, 0.5);
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.35);
+}
+
+.kpi-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.35rem;
+}
+
+.kpi-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-icon-pill {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    border: 1px solid;
+    flex-shrink: 0;
+}
+
+.kpi-value-wrapper {
+    margin: 0.2rem 0;
+}
+
+.kpi-value {
+    font-size: clamp(1.3rem, 1.6vw, 1.7rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-delta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ----------------- Callout & Card Boxes ----------------- */
+.saas-callout {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-left: 4px solid var(--accent-cyan);
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.25rem;
+}
+
+.saas-callout-info {
+    border-left-color: var(--accent-cyan);
+}
+
+.saas-callout-warning {
+    border-left-color: var(--accent-amber);
+}
+
+.saas-callout-success {
+    border-left-color: var(--accent-emerald);
+}
+
+.callout-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 0.3rem;
+}
+
+.callout-body {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+/* ----------------- Tables Styling ----------------- */
+div[data-testid="stDataFrame"] {
+    border: 1px solid var(--border-card) !important;
+    border-radius: var(--radius-md) !important;
+    background-color: var(--bg-card) !important;
+    overflow: hidden !important;
+}
+
+/* ----------------- Tabs Styling ----------------- */
+button[data-baseweb="tab"] {
+    padding: 0.6rem 1.15rem !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
+    border: none !important;
+}
+
+button[data-baseweb="tab"]:hover {
+    color: var(--text-primary) !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: var(--accent-cyan) !important;
+    border-bottom: 2px solid var(--accent-cyan) !important;
+    background: rgba(56, 189, 248, 0.04) !important;
+}
+
+/* ----------------- Buttons & Controls ----------------- */
+.stButton > button {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(56, 189, 248, 0.4) !important;
+    border-radius: var(--radius-sm) !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    padding: 0.45rem 1rem !important;
+    transition: all 0.15s ease-in-out !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
+    color: #080d1a !important;
+    border-color: #7dd3fc !important;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3) !important;
+}
+
+.stDownloadButton > button {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--border-card) !important;
+    border-radius: var(--radius-sm) !important;
+    font-weight: 600 !important;
+}
+
+.stDownloadButton > button:hover {
+    border-color: var(--accent-cyan) !important;
+    color: var(--accent-cyan) !important;
+}
+
+/* Inputs & Select Boxes */
+div[data-baseweb="select"] > div,
+div[data-baseweb="input"] > div {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-card) !important;
+    color: var(--text-primary) !important;
+    border-radius: var(--radius-sm) !important;
+}
+
+div[data-baseweb="select"]:hover > div,
+div[data-baseweb="input"]:hover > div {
+    border-color: var(--accent-cyan) !important;
+}
+
+/* Metrics fallback */
+div[data-testid="stMetric"] {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-card) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 0.9rem 1.1rem !important;
+}
+
+div[data-testid="stMetric"]:hover {
+    border-color: var(--accent-cyan) !important;
+}
+
+
+/* ----------------- Source Status Chips ----------------- */
+.source-chip-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+}
+
+.source-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.76rem;
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.chip-dot {
+    font-size: 0.7rem;
+}
+
+.chip-badge {
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+}
+
+/* ----------------- Live Intelligence Cards ----------------- */
+.live-intel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.live-intel-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.15rem;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.live-intel-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(56, 189, 248, 0.4);
+}
+
+.live-intel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.live-intel-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.live-intel-pill {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius-pill);
+}
+
+.live-intel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    font-size: 0.82rem;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.live-intel-row:last-child {
+    border-bottom: none;
+}

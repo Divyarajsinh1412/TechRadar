@@ -1,0 +1,108 @@
+# ====================================================================
+# TechRadar — Render Cloud Deployment Blueprint (render.yaml)
+# Deploys Streamlit Web Application + Automated Scheduled Cron Jobs
+# ====================================================================
+
+services:
+  # 1. Main Interactive Streamlit Analytics Dashboard
+  - type: web
+    name: techradar-web
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.address 0.0.0.0 --server.port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        sync: false # Set via Render Dashboard (Supabase PostgreSQL Connection String)
+      - key: GITHUB_TOKEN
+        sync: false # GitHub Personal Access Token (Optional, for higher rate limits)
+      - key: ADZUNA_APP_ID
+        sync: false # Adzuna Job Market App ID
+      - key: ADZUNA_APP_KEY
+        sync: false # Adzuna Job Market App Key
+      - key: ADZUNA_COUNTRY
+        value: in
+
+  # 2. Render Cron Job: GitHub Repository Collector (Every 6 Hours)
+  - type: cron
+    name: techradar-cron-github
+    env: python
+    region: oregon
+    plan: starter
+    schedule: "0 */6 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run_collector.py --source github
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: techradar-web
+          envVarKey: DATABASE_URL
+      - key: GITHUB_TOKEN
+        fromService:
+          type: web
+          name: techradar-web
+          envVarKey: GITHUB_TOKEN
+
+  # 3. Render Cron Job: Hugging Face AI Models Collector (Every 6 Hours)
+  - type: cron
+    name: techradar-cron-huggingface
+    env: python
+    region: oregon
+    plan: starter
+    schedule: "30 */6 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run_collector.py --source huggingface
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: techradar-web
+          envVarKey: DATABASE_URL
+
+  # 4. Render Cron Job: Job Market Telemetry (Every 12 Hours)
+  - type: cron
+    name: techradar-cron-jobs
+    env: python
+    region: oregon
+    plan: starter
+    schedule: "0 */12 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run_collector.py --source adzuna
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: techradar-web
+          envVarKey: DATABASE_URL
+      - key: ADZUNA_APP_ID
+        fromService:
+          type: web
+          name: techradar-web
+          envVarKey: ADZUNA_APP_ID
+      - key: ADZUNA_APP_KEY
+        fromService:
+          type: web
+          name: techradar-web
+          envVarKey: ADZUNA_APP_KEY
+      - key: ADZUNA_COUNTRY
+        value: in
+
+  # 5. Render Cron Job: Google Trends Search Interest (Daily at 02:00 UTC)
+  - type: cron
+    name: techradar-cron-google-trends
+    env: python
+    region: oregon
+    plan: starter
+    schedule: "0 2 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run_collector.py --source google_trends
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: techradar-web
+          envVarKey: DATABASE_URL

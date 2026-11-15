@@ -1,0 +1,31 @@
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Local Database Files (Preserve locally, never commit)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Streamlit Local Runtime State
+.streamlit/secrets.toml
+
+# IDE, Editor & OS Temporary Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
