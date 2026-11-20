@@ -111,8 +111,8 @@ def get_connection(db_path: str = SQLITE_DB_PATH):
 
 def is_using_postgres() -> bool:
     """Return True if currently configured to use Supabase / PostgreSQL."""
-    url = get_database_url()
-    return url.startswith("postgresql://") or url.startswith("postgres://")
+    url = get_database_url().lower()
+    return url.startswith("postgresql://") or url.startswith("postgres://") or url.startswith("postgresql+")
 
 if st is not None:
     @st.cache_resource(show_spinner=False)
