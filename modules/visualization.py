@@ -13,13 +13,12 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from modules.chart_styles import (
     apply_plotly_theme,
     apply_mpl_theme,
+    PLOTLY_CONFIG,
     CATEGORY_COLORS,
     TIER_COLORS,
     PALETTE,
@@ -69,15 +68,6 @@ def plotly_category_donut(
     ])
 
     fig.update_layout(
-        title=dict(text="<b>Market Share by Technology Category</b>", x=0.01, y=0.96),
-        legend=dict(
-            orientation="v",
-            yanchor="middle",
-            y=0.5,
-            xanchor="left",
-            x=1.02,
-            font=dict(size=11, color=TEXT_SECONDARY)
-        ),
         annotations=[
             dict(
                 text=f"<b>{total_val:,.0f}</b><br><span style='font-size:10px;color:#94a3b8;'>TOTAL JOBS</span>",
@@ -87,7 +77,15 @@ def plotly_category_donut(
         ]
     )
 
-    return apply_plotly_theme(fig, height=360, show_legend=True)
+    return apply_plotly_theme(
+        fig, 
+        height=380, 
+        show_legend=True,
+        legend_orientation="h",
+        legend_y=-0.14,
+        legend_x=0.5,
+        margin=dict(t=15, b=45, l=15, r=15)
+    )
 
 # ----------------- 2. Top 10 Technologies Horizontal Bar Chart -----------------
 
@@ -124,13 +122,16 @@ def plotly_top_technologies_bar(
     ])
 
     fig.update_layout(
-        title=dict(text=f"<b>Top {top_n} Technologies by Job Demand</b>", x=0.01, y=0.96),
         yaxis=dict(autorange="reversed", tickfont=dict(size=11, color=TEXT_PRIMARY)),
-        xaxis=dict(title="Total Job Postings", tickformat="~s"),
-        margin=dict(t=50, b=40, l=90, r=40)
+        xaxis=dict(title="Total Job Postings", tickformat="~s")
     )
 
-    return apply_plotly_theme(fig, height=360, show_legend=False)
+    return apply_plotly_theme(
+        fig, 
+        height=380, 
+        show_legend=False,
+        margin=dict(t=15, b=40, l=95, r=40)
+    )
 
 # ----------------- 3. Longitudinal Trajectory Multi-Line Chart -----------------
 
@@ -171,13 +172,20 @@ def plotly_timeseries_lines(
 
     metric_name = value_col.replace("_", " ").title()
     fig.update_layout(
-        title=dict(text=f"<b>Longitudinal Trend ({metric_name})</b>", x=0.01, y=0.96),
         hovermode="x unified",
         xaxis=dict(title="Posting Period", showgrid=True),
         yaxis=dict(title=metric_name, showgrid=True)
     )
 
-    return apply_plotly_theme(fig, height=380, show_legend=True)
+    return apply_plotly_theme(
+        fig, 
+        height=380, 
+        show_legend=True,
+        legend_orientation="h",
+        legend_y=-0.28,
+        legend_x=0.5,
+        margin=dict(t=15, b=60, l=50, r=20)
+    )
 
 # ----------------- 4. Enterprise Adoption vs. Growth Quadrant -----------------
 
@@ -247,18 +255,26 @@ def plotly_scatter_quadrant(
                        showarrow=False, font=dict(color=TEXT_MUTED, size=10))
 
     fig.update_layout(
-        title=dict(text="<b>Enterprise Adoption vs. Growth Momentum</b>", x=0.01, y=0.96),
         xaxis=dict(title="Enterprise Adoption Score (0–100)", range=[0, 100]),
-        yaxis=dict(title="Growth Momentum Rate (%)"),
-        legend=dict(orientation="h", y=-0.22, x=0.5, xanchor="center")
+        yaxis=dict(title="Growth Momentum Rate (%)")
     )
 
-    return apply_plotly_theme(fig, height=390, show_legend=True)
+    return apply_plotly_theme(
+        fig, 
+        height=390, 
+        show_legend=True,
+        legend_orientation="h",
+        legend_y=-0.28,
+        legend_x=0.5,
+        margin=dict(t=15, b=60, l=50, r=20)
+    )
 
-# ----------------- 5. Matplotlib & Seaborn Statistical Charts -----------------
+# ----------------- 5. Matplotlib & Seaborn Statistical Charts (Lazily Loaded) -----------------
 
-def plot_histogram_kde(series: pd.Series, title: str, xlabel: str, bins: int = 25) -> plt.Figure:
+def plot_histogram_kde(series: pd.Series, title: str, xlabel: str, bins: int = 25):
     """Refined Histogram with KDE."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     apply_mpl_theme()
     fig, ax = plt.subplots(figsize=(8, 4.2), dpi=120)
     s = series.dropna()
@@ -275,8 +291,10 @@ def plot_histogram_kde(series: pd.Series, title: str, xlabel: str, bins: int = 2
     plt.tight_layout()
     return fig
 
-def plot_boxplot_by_category(df: pd.DataFrame, x_col: str, y_col: str, title: str) -> plt.Figure:
+def plot_boxplot_by_category(df: pd.DataFrame, x_col: str, y_col: str, title: str):
     """Refined Category Boxplot."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     apply_mpl_theme()
     fig, ax = plt.subplots(figsize=(9, 4.5), dpi=120)
     
@@ -293,8 +311,10 @@ def plot_boxplot_by_category(df: pd.DataFrame, x_col: str, y_col: str, title: st
     plt.tight_layout()
     return fig
 
-def plot_correlation_heatmap(corr_df: pd.DataFrame, title: str = "Feature Correlation Matrix") -> plt.Figure:
+def plot_correlation_heatmap(corr_df: pd.DataFrame, title: str = "Feature Correlation Matrix"):
     """Refined Correlation Heatmap with clean annotations."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     apply_mpl_theme()
     fig, ax = plt.subplots(figsize=(7.5, 6), dpi=120)
     mask = np.triu(np.ones_like(corr_df, dtype=bool))
@@ -313,8 +333,10 @@ def plot_correlation_heatmap(corr_df: pd.DataFrame, title: str = "Feature Correl
     plt.tight_layout()
     return fig
 
-def plot_scatter_regression(df: pd.DataFrame, x_col: str, y_col: str, title: str) -> plt.Figure:
+def plot_scatter_regression(df: pd.DataFrame, x_col: str, y_col: str, title: str):
     """Refined Bivariate Scatter Regression."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     apply_mpl_theme()
     fig, ax = plt.subplots(figsize=(8, 4.5), dpi=120)
     sns.regplot(

@@ -182,8 +182,25 @@ with tab_iqr:
         st.info("Select a valid numeric column to compute IQR.")
 
 with tab_preview:
-    st.markdown("#### Cleaned Dataset Records (First 100 Rows)")
-    st.dataframe(cleaned_df.head(100), use_container_width=True, height=380)
+    st.markdown("#### Cleaned Dataset Records Preview")
+    p_sz1, p_sz2 = st.columns([1, 2])
+    with p_sz1:
+        prev_page_size = st.selectbox("Rows per view:", [50, 100, 200, "All"], index=0, key="prev_ps")
+    
+    if prev_page_size == "All":
+        preview_slice = cleaned_df
+        prev_num = 1
+        total_p = 1
+    else:
+        import math
+        total_p = max(1, math.ceil(len(cleaned_df) / int(prev_page_size)))
+        with p_sz2:
+            prev_num = st.number_input("Page:", min_value=1, max_value=total_p, value=1, step=1, key="prev_pn")
+        st_idx = (prev_num - 1) * int(prev_page_size)
+        preview_slice = cleaned_df.iloc[st_idx:st_idx + int(prev_page_size)]
+
+    st.dataframe(preview_slice, use_container_width=True, height=380)
+    st.caption(f"Showing {len(preview_slice):,} records (Page {prev_num} of {total_p}) • Total: {len(cleaned_df):,} rows.")
 
 with tab_commit:
     st.markdown("#### Commit Cleaned Dataset to Active Session State")

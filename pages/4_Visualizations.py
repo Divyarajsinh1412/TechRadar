@@ -14,7 +14,7 @@ from modules.visualization import (
     plotly_top_technologies_bar,
     plotly_timeseries_lines
 )
-from modules.chart_styles import apply_plotly_theme, CATEGORY_COLORS, CYAN, INDIGO
+from modules.chart_styles import apply_plotly_theme, PLOTLY_CONFIG, CATEGORY_COLORS, CYAN, INDIGO
 from modules.ui_components import (
     render_page_header,
     render_sidebar_branding,
@@ -72,7 +72,7 @@ with tab_bar:
     b_col1, b_col2 = st.columns(2)
     with b_col1:
         fig_bar = plotly_top_technologies_bar(df, tech_col="technology", value_col="job_postings", top_n=top_n_slider)
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CONFIG)
     with b_col2:
         if "average_salary" in df.columns:
             sal_by_cat = df.groupby("category")["average_salary"].mean().reset_index().sort_values("average_salary", ascending=True)
@@ -84,7 +84,7 @@ with tab_bar:
             )
             fig_sal.update_layout(yaxis=dict(autorange="reversed"))
             fig_sal = apply_plotly_theme(fig_sal, height=360, show_legend=False)
-            st.plotly_chart(fig_sal, use_container_width=True)
+            st.plotly_chart(fig_sal, use_container_width=True, config=PLOTLY_CONFIG)
 
 with tab_line:
     st.markdown("#### Longitudinal Multi-Technology Trajectories")
@@ -100,7 +100,7 @@ with tab_line:
         fig_lines = plotly_timeseries_lines(
             df, date_col="date", value_col=metric_choice, group_col="technology", technologies=sel_techs
         )
-        st.plotly_chart(fig_lines, use_container_width=True)
+        st.plotly_chart(fig_lines, use_container_width=True, config=PLOTLY_CONFIG)
     else:
         st.info("Select at least one technology to display trajectory.")
 
@@ -110,7 +110,7 @@ with tab_pie:
     with p_col1:
         if "category" in df.columns:
             fig_donut = plotly_category_donut(df, category_col="category", value_col="job_postings")
-            st.plotly_chart(fig_donut, use_container_width=True)
+            st.plotly_chart(fig_donut, use_container_width=True, config=PLOTLY_CONFIG)
     with p_col2:
         st.markdown("##### Category Aggregate Breakdown:")
         cat_tbl = df.groupby("category").agg({
@@ -145,7 +145,7 @@ with tab_scatter:
             labels={"company_adoption": "Enterprise Adoption (0-100)", "developer_interest": "Developer Interest (0-100)"}
         )
         fig_bubble = apply_plotly_theme(fig_bubble, height=400)
-        st.plotly_chart(fig_bubble, use_container_width=True)
+        st.plotly_chart(fig_bubble, use_container_width=True, config=PLOTLY_CONFIG)
 
 with tab_compare:
     st.markdown("#### Head-to-Head Comparative Scorecard")
@@ -186,4 +186,4 @@ with tab_compare:
         title=f"Head-to-Head Benchmark: {tech_a} vs. {tech_b}"
     )
     fig_cmp = apply_plotly_theme(fig_cmp, height=340)
-    st.plotly_chart(fig_cmp, use_container_width=True)
+    st.plotly_chart(fig_cmp, use_container_width=True, config=PLOTLY_CONFIG)

@@ -16,7 +16,7 @@ from modules.time_series import (
     demonstrate_period_arithmetic,
     demonstrate_timezone_handling
 )
-from modules.chart_styles import apply_plotly_theme, CYAN, INDIGO, TEXT_MUTED
+from modules.chart_styles import apply_plotly_theme, PLOTLY_CONFIG, CYAN, INDIGO, TEXT_MUTED
 from modules.ui_components import (
     render_page_header,
     render_sidebar_branding,
@@ -120,7 +120,7 @@ with tab_drilldown:
             color_discrete_sequence=[CYAN]
         )
         fig_ts = apply_plotly_theme(fig_ts, height=360, show_legend=False)
-        st.plotly_chart(fig_ts, use_container_width=True)
+        st.plotly_chart(fig_ts, use_container_width=True, config=PLOTLY_CONFIG)
 
         st.markdown("##### Resampled Observation Table:")
         st.dataframe(resampled_data.reset_index(), use_container_width=True)
@@ -141,7 +141,7 @@ with tab_rolling:
             color_discrete_sequence=[TEXT_MUTED, CYAN, INDIGO]
         )
         fig_ma = apply_plotly_theme(fig_ma, height=360, show_legend=True)
-        st.plotly_chart(fig_ma, use_container_width=True)
+        st.plotly_chart(fig_ma, use_container_width=True, config=PLOTLY_CONFIG)
 
         st.markdown("##### Moving Window & Shifting (Lag) Table:")
         st.dataframe(rolling_df.reset_index(), use_container_width=True)

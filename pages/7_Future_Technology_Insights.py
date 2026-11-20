@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.express as px
 from modules.data_loader import load_dataset
 from modules.opportunity_analysis import calculate_opportunity_scores, get_classification_summary
-from modules.chart_styles import apply_plotly_theme, TIER_COLORS, CYAN, INDIGO, EMERALD, AMBER
+from modules.chart_styles import apply_plotly_theme, PLOTLY_CONFIG, TIER_COLORS, CYAN, INDIGO, EMERALD, AMBER
 from modules.ui_components import (
     render_page_header,
     render_sidebar_branding,
@@ -140,7 +140,7 @@ with tab_quadrant:
         title="Enterprise Adoption vs. Growth Rate"
     )
     fig_quad = apply_plotly_theme(fig_quad, height=420)
-    st.plotly_chart(fig_quad, use_container_width=True)
+    st.plotly_chart(fig_quad, use_container_width=True, config=PLOTLY_CONFIG)
 
 with tab_breakdown:
     st.markdown("#### Normalized Sub-Indicator Decomposition")
@@ -169,7 +169,7 @@ with tab_breakdown:
             color_discrete_sequence=[CYAN, INDIGO, EMERALD, AMBER]
         )
         fig_decomp = apply_plotly_theme(fig_decomp, height=320, show_legend=False)
-        st.plotly_chart(fig_decomp, use_container_width=True)
+        st.plotly_chart(fig_decomp, use_container_width=True, config=PLOTLY_CONFIG)
 
 with tab_hidden:
     st.markdown("#### ✨ Early-Stage & Hidden Opportunities (Low Demand / High Growth)")

@@ -10,7 +10,8 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 
-from modules.data_loader import load_dataset_by_frequency, get_dataset_metadata
+from modules.data_loader import load_dataset_by_frequency, get_dataset_metadata, clear_data_caches
+from modules.chart_styles import PLOTLY_CONFIG
 from modules.multi_period_analytics import (
     compute_multi_period_growth_and_averages,
     get_fastest_growing_now,
@@ -27,7 +28,9 @@ from modules.ui_components import (
     render_sidebar_footer,
     render_callout,
     render_source_status_badges,
-    render_database_environment_badge
+    render_database_environment_badge,
+    render_executive_summary_banner,
+    render_intelligence_card
 )
 from modules.visualization import (
     plotly_category_donut,
@@ -84,6 +87,7 @@ with st.sidebar:
     with col_ref1:
         if st.button("🔄 Refresh Data", use_container_width=True, help="Trigger manual live data collection from GitHub, Hugging Face, and Job Feeds"):
             with st.spinner("Collecting live signals..."):
+                clear_data_caches()
                 active_techs = ["Python", "Rust", "Go", "PyTorch", "Docker", "Kubernetes", "TypeScript", "React", "FastAPI", "Vite", "Zig", "LangChain"]
                 res = refresh_live_intelligence(active_techs, frequency=selected_frequency.lower())
                 st.session_state.last_refresh_time = res["timestamp"]
@@ -94,6 +98,14 @@ with st.sidebar:
         auto_poll = st.toggle("⏱️ Real-time", value=False, help="Enable automatic periodic polling mode")
 
     st.caption(f"Last Refreshed: `{st.session_state.last_refresh_time}`")
+
+    st.markdown("---")
+    st.markdown("#### 📘 Analytical Horizon")
+    st.caption(
+        "• **Daily:** Real-time 24h market shifts\n\n"
+        "• **Weekly:** 7-day momentum & hiring acceleration\n\n"
+        "• **Monthly:** 5-year macro trends & benchmarks"
+    )
 
     st.markdown("---")
     st.markdown("#### 📂 Dataset Mode")
@@ -125,9 +137,16 @@ with st.sidebar:
 
     render_sidebar_footer()
 
-# ----------------- Multi-Period Data Ingestion -----------------
+# ----------------- Multi-Period Data Ingestion (Session Cached) -----------------
 raw_period_df = load_dataset_by_frequency(frequency=selected_frequency, file_source=uploaded_file)
-period_df = compute_multi_period_growth_and_averages(raw_period_df, frequency=selected_frequency)
+
+period_cache_key = f"period_df_{selected_frequency}"
+if uploaded_file is None and period_cache_key in st.session_state:
+    period_df = st.session_state[period_cache_key]
+else:
+    period_df = compute_multi_period_growth_and_averages(raw_period_df, frequency=selected_frequency)
+    if uploaded_file is None:
+        st.session_state[period_cache_key] = period_df
 
 metadata = get_dataset_metadata(period_df)
 
@@ -140,11 +159,13 @@ render_page_header(
     status_pill=f"● Mode: {selected_frequency} Resolution"
 )
 
+# Fetch Source Status with in-memory caching and reuse across badges
+source_status_df = get_source_status()
+
 # Cloud Database & Environment Indicator
-render_database_environment_badge()
+render_database_environment_badge(source_status_df)
 
 # Live Data Source Status Banner
-source_status_df = get_source_status()
 render_source_status_badges(source_status_df)
 
 # Academic Transparency Notice Callout
@@ -192,8 +213,6 @@ if filtered_df.empty:
 st.markdown("---")
 
 # ----------------- Dynamic Multi-Period KPI Section -----------------
-st.markdown(f"### 📊 Key Performance Indicators ({selected_frequency})")
-
 total_techs = filtered_df["technology"].nunique()
 total_categories = filtered_df["category"].nunique()
 total_postings = int(filtered_df["job_postings"].sum())
@@ -213,6 +232,19 @@ if not valid_growth.empty:
     fastest_rate = valid_growth.groupby("technology")[growth_metric_col].mean().max()
 else:
     fastest_tech, fastest_rate = "N/A", 0.0
+
+# Render Executive Summary Briefing Banner (Easily Understood Takeaways)
+summary_dict = {
+    "highest_demand_tech": highest_demand_tech,
+    "highest_demand_val": highest_demand_val,
+    "fastest_tech": fastest_tech,
+    "fastest_rate": fastest_rate,
+    "avg_salary": avg_salary,
+    "total_postings": total_postings
+}
+render_executive_summary_banner(selected_frequency, summary_dict)
+
+st.markdown(f"### 📊 Key Performance Indicators ({selected_frequency})")
 
 k1, k2, k3 = st.columns(3)
 with k1:
@@ -255,175 +287,126 @@ intel_c1, intel_c2, intel_c3 = st.columns(3)
 # 1. Fastest Growing
 with intel_c1:
     fastest_df = get_fastest_growing_now(filtered_df, top_n=4)
-    st.markdown(
-        """
-        <div class="live-intel-card">
-            <div class="live-intel-header">
-                <span class="live-intel-title">⚡ Fastest Growing Today</span>
-                <span class="live-intel-pill" style="background:#10b98120;color:#10b981;">DoD / Period</span>
-            </div>
-        """,
-        unsafe_allow_html=True
-    )
+    rows_fastest = []
     if not fastest_df.empty:
         for _, r in fastest_df.iterrows():
             g_val = r.get("growth_pct", r.get("growth_rate", 0))
             g_str = f"{g_val:+.1f}%" if pd.notna(g_val) else "N/A"
-            st.markdown(
-                f"""
-                <div class="live-intel-row">
-                    <span><b>{r['technology']}</b> <span style='color:#64748b;'>({r['category']})</span></span>
-                    <span style='color:#10b981;font-weight:700;'>{g_str}</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-    else:
-        st.caption("No rapid growth observations detected in current slice.")
-    st.markdown("</div>", unsafe_allow_html=True)
+            rows_fastest.append((r["technology"], r["category"], g_str, "#10b981"))
+    render_intelligence_card(
+        title="Fastest Growing Today",
+        icon="⚡",
+        pill_text="DoD Growth",
+        pill_color="#10b981",
+        rows=rows_fastest,
+        empty_msg="No rapid growth observations detected."
+    )
 
 # 2. Gaining GitHub Activity
 with intel_c2:
     github_df = get_gaining_github_activity(filtered_df, top_n=4)
-    st.markdown(
-        """
-        <div class="live-intel-card">
-            <div class="live-intel-header">
-                <span class="live-intel-title">🐙 Top GitHub Activity</span>
-                <span class="live-intel-pill" style="background:#38bdf820;color:#38bdf8;">Stars & Repos</span>
-            </div>
-        """,
-        unsafe_allow_html=True
-    )
+    rows_gh = []
     if not github_df.empty:
         for _, r in github_df.iterrows():
             gh_val = r.get("github_activity", 0)
-            st.markdown(
-                f"""
-                <div class="live-intel-row">
-                    <span><b>{r['technology']}</b> <span style='color:#64748b;'>({r['category']})</span></span>
-                    <span style='color:#38bdf8;font-weight:700;'>{gh_val:.1f}/100</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-    else:
-        st.caption("No GitHub metrics available.")
-    st.markdown("</div>", unsafe_allow_html=True)
+            rows_gh.append((r["technology"], r["category"], f"{gh_val:.1f}/100", "#38bdf8"))
+    render_intelligence_card(
+        title="Top GitHub Activity",
+        icon="🐙",
+        pill_text="Stars & Repos",
+        pill_color="#38bdf8",
+        rows=rows_gh,
+        empty_msg="No GitHub metrics available."
+    )
 
 # 3. New Job Postings Leadership
 with intel_c3:
     jobs_top_df = get_newly_posted_technologies(filtered_df, top_n=4)
-    st.markdown(
-        """
-        <div class="live-intel-card">
-            <div class="live-intel-header">
-                <span class="live-intel-title">💼 New Job Postings</span>
-                <span class="live-intel-pill" style="background:#f59e0b20;color:#f59e0b;">Hiring Volume</span>
-            </div>
-        """,
-        unsafe_allow_html=True
-    )
+    rows_jobs = []
     if not jobs_top_df.empty:
         for _, r in jobs_top_df.iterrows():
             j_val = r.get("job_postings", 0)
-            st.markdown(
-                f"""
-                <div class="live-intel-row">
-                    <span><b>{r['technology']}</b> <span style='color:#64748b;'>({r['category']})</span></span>
-                    <span style='color:#f59e0b;font-weight:700;'>{j_val:,.0f} jobs</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-    else:
-        st.caption("No posting volume data.")
-    st.markdown("</div>", unsafe_allow_html=True)
+            rows_jobs.append((r["technology"], r["category"], f"{j_val:,.0f} jobs", "#f59e0b"))
+    render_intelligence_card(
+        title="Hiring Volume Leaders",
+        icon="💼",
+        pill_text="Open Roles",
+        pill_color="#f59e0b",
+        rows=rows_jobs,
+        empty_msg="No posting volume data."
+    )
 
 intel_c4, intel_c5 = st.columns(2)
 
 # 4. Newly Detected Frameworks
 with intel_c4:
     new_skills = get_newly_detected_skills()
-    st.markdown(
-        """
-        <div class="live-intel-card">
-            <div class="live-intel-header">
-                <span class="live-intel-title">🧠 Newly Detected Skills & Frameworks</span>
-                <span class="live-intel-pill" style="background:#8b5cf620;color:#8b5cf6;">Emerging Ecosystem</span>
-            </div>
-        """,
-        unsafe_allow_html=True
+    rows_skills = [
+        (s["skill"], s["signal"], s["freshness"], "#a855f7")
+        for s in new_skills[:4]
+    ]
+    render_intelligence_card(
+        title="Newly Detected Frameworks",
+        icon="🧠",
+        pill_text="Emerging Tech",
+        pill_color="#8b5cf6",
+        rows=rows_skills,
+        empty_msg="No new skills detected."
     )
-    for s in new_skills[:4]:
-        st.markdown(
-            f"""
-            <div class="live-intel-row">
-                <span><b>{s['skill']}</b> <span style='color:#64748b;'>• {s['signal']}</span></span>
-                <span style='color:#a855f7;font-weight:600;'>{s['freshness']}</span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # 5. Declining Activity
 with intel_c5:
     declining_df = get_declining_technologies(filtered_df, top_n=4)
-    st.markdown(
-        """
-        <div class="live-intel-card">
-            <div class="live-intel-header">
-                <span class="live-intel-title">📉 Technologies Showing Declining Activity</span>
-                <span class="live-intel-pill" style="background:#f43f5e20;color:#f43f5e;">Cooling Momentum</span>
-            </div>
-        """,
-        unsafe_allow_html=True
-    )
+    rows_dec = []
     if not declining_df.empty:
         for _, r in declining_df.iterrows():
             d_val = r.get("growth_pct", r.get("growth_rate", 0))
-            st.markdown(
-                f"""
-                <div class="live-intel-row">
-                    <span><b>{r['technology']}</b> <span style='color:#64748b;'>({r['category']})</span></span>
-                    <span style='color:#f43f5e;font-weight:700;'>{d_val:.1f}%</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-    else:
-        st.caption("No technologies exhibited negative momentum in the selected window.")
-    st.markdown("</div>", unsafe_allow_html=True)
+            rows_dec.append((r["technology"], r["category"], f"{d_val:.1f}%", "#f43f5e"))
+    render_intelligence_card(
+        title="Cooling Momentum",
+        icon="📉",
+        pill_text="Slowing Pace",
+        pill_color="#f43f5e",
+        rows=rows_dec,
+        empty_msg="No technologies showing contraction."
+    )
 
 st.markdown("---")
 
 # ----------------- Redesigned Visual Charts -----------------
-st.markdown(f"### 📈 Visual Market Breakdown ({selected_frequency})")
+st.markdown(f"### 📈 Visual Market Breakdown & Trends ({selected_frequency})")
 
 r1_col1, r1_col2 = st.columns(2)
 
 with r1_col1:
+    st.markdown("#### 🍩 Category Market Share")
+    st.caption("Distribution of active job demand across technology domains (Web, Cloud, AI, Systems).")
     donut_fig = plotly_category_donut(filtered_df, category_col="category", value_col="job_postings")
-    st.plotly_chart(donut_fig, use_container_width=True)
+    st.plotly_chart(donut_fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 with r1_col2:
+    st.markdown("#### 📊 Top 10 Most In-Demand Skills")
+    st.caption("Ranked by total job postings in the selected period. Sorted highest to lowest.")
     bar_fig = plotly_top_technologies_bar(filtered_df, tech_col="technology", value_col="job_postings", top_n=10)
-    st.plotly_chart(bar_fig, use_container_width=True)
+    st.plotly_chart(bar_fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 st.markdown("---")
 
 r2_col1, r2_col2 = st.columns(2)
 
 with r2_col1:
+    st.markdown("#### ⏱️ Multi-Year Trajectories (Top 5)")
+    st.caption("Historical demand comparison tracking long-term shifts in developer popularity.")
     top_5_techs = filtered_df.groupby("technology")["job_postings"].sum().nlargest(5).index.tolist()
     line_fig = plotly_timeseries_lines(
         filtered_df, date_col="date", value_col="job_postings", group_col="technology", technologies=top_5_techs
     )
-    st.plotly_chart(line_fig, use_container_width=True)
+    st.plotly_chart(line_fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 with r2_col2:
+    st.markdown("#### 🎯 Growth vs. Enterprise Adoption Matrix")
+    st.caption("BCG Matrix: Top-right are High-Growth Market Leaders; top-left are Fast-Rising Disruptors.")
     quad_fig = plotly_scatter_quadrant(
         filtered_df, x_col="company_adoption", y_col="growth_rate", size_col="job_postings", hover_col="technology"
     )
-    st.plotly_chart(quad_fig, use_container_width=True)
+    st.plotly_chart(quad_fig, use_container_width=True, config=PLOTLY_CONFIG)

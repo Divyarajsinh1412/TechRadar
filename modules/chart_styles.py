@@ -8,8 +8,6 @@ import os
 import tempfile
 os.environ.setdefault("MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "techradar_matplotlib"))
 
-import matplotlib.pyplot as plt
-import seaborn as sns
 import plotly.graph_objects as go
 
 # ----------------- Color Tokens -----------------
@@ -54,72 +52,109 @@ TIER_COLORS = {
     "Monitor": TEXT_MUTED
 }
 
-# ----------------- Plotly Global Layout Preset -----------------
+# ----------------- Plotly Global Layout Preset & Performance Config -----------------
 
-def apply_plotly_theme(fig: go.Figure, height: int = 380, show_legend: bool = True) -> go.Figure:
+PLOTLY_CONFIG = {
+    "responsive": True,
+    "displayModeBar": False,
+    "displaylogo": False,
+    "scrollZoom": False
+}
+
+def apply_plotly_theme(
+    fig: go.Figure, 
+    height: int = 380, 
+    show_legend: bool = True,
+    title: Optional[str] = None,
+    legend_orientation: str = "h",
+    legend_y: float = -0.22,
+    legend_x: float = 0.5,
+    margin: Optional[dict] = None
+) -> go.Figure:
     """
     Apply a consistent, high-end SaaS dark theme to any Plotly figure.
     - Transparent container backgrounds.
     - Subtle gridlines.
     - Modern Inter/system sans typography.
     - Clean hover tooltips.
+    - Non-overlapping legends (placed below the chart or customized).
+    - Mobile-responsive margins and autosizing.
     """
-    fig.update_layout(
+    layout_updates = dict(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         height=height,
+        autosize=True,
         font=dict(
             family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-            size=12,
+            size=11,
             color=TEXT_SECONDARY
-        ),
-        title=dict(
-            font=dict(
-                size=14,
-                color=TEXT_PRIMARY,
-                family="Inter, -apple-system, sans-serif"
-            ),
-            x=0.01,
-            xanchor="left",
-            y=0.96
-        ),
-        margin=dict(t=50, b=40, l=45, r=25),
-        showlegend=show_legend,
-        legend=dict(
-            font=dict(size=11, color=TEXT_SECONDARY),
-            bgcolor="rgba(17, 28, 51, 0.6)",
-            bordercolor="rgba(30, 41, 59, 0.8)",
-            borderwidth=1,
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1.0
         ),
         hoverlabel=dict(
             bgcolor=BG_TOOLTIP,
             bordercolor=BORDER_COLOR,
-            font=dict(color=TEXT_PRIMARY, size=12, family="Inter, sans-serif")
+            font=dict(color=TEXT_PRIMARY, size=11, family="Inter, sans-serif")
         ),
+        showlegend=show_legend,
         xaxis=dict(
             gridcolor=GRID_COLOR,
             zerolinecolor=GRID_COLOR,
             showline=False,
-            tickfont=dict(size=11, color=TEXT_MUTED)
+            tickfont=dict(size=10, color=TEXT_MUTED)
         ),
         yaxis=dict(
             gridcolor=GRID_COLOR,
             zerolinecolor=GRID_COLOR,
             showline=False,
-            tickfont=dict(size=11, color=TEXT_MUTED)
+            tickfont=dict(size=10, color=TEXT_MUTED)
         )
     )
+
+    if title:
+        layout_updates["title"] = dict(
+            text=title,
+            font=dict(size=13, color=TEXT_PRIMARY, family="Inter, -apple-system, sans-serif"),
+            x=0.01,
+            xanchor="left",
+            y=0.98
+        )
+        default_margin = dict(t=45, b=45, l=45, r=20)
+    elif fig.layout.title and fig.layout.title.text:
+        layout_updates["title"] = dict(
+            text=fig.layout.title.text,
+            font=dict(size=13, color=TEXT_PRIMARY, family="Inter, -apple-system, sans-serif"),
+            x=0.01,
+            xanchor="left",
+            y=0.98
+        )
+        default_margin = dict(t=45, b=45, l=45, r=20)
+    else:
+        layout_updates["title"] = None
+        default_margin = dict(t=15, b=45, l=45, r=20)
+
+    layout_updates["margin"] = margin if margin is not None else default_margin
+
+    if show_legend:
+        layout_updates["legend"] = dict(
+            font=dict(size=10, color=TEXT_SECONDARY),
+            bgcolor="rgba(17, 28, 51, 0.6)",
+            bordercolor="rgba(30, 41, 59, 0.8)",
+            borderwidth=1,
+            orientation=legend_orientation,
+            yanchor="top" if legend_y < 0 else "bottom",
+            y=legend_y,
+            xanchor="center" if legend_orientation == "h" else "left",
+            x=legend_x
+        )
+
+    fig.update_layout(**layout_updates)
     return fig
 
 # ----------------- Matplotlib / Seaborn Global Theme -----------------
 
 def apply_mpl_theme():
-    """Apply SaaS dark palette to Matplotlib and Seaborn figures."""
+    """Apply SaaS dark palette to Matplotlib and Seaborn figures (lazily loaded)."""
+    import matplotlib.pyplot as plt
     plt.style.use("dark_background")
     plt.rcParams.update({
         "figure.facecolor": BG_DARK,

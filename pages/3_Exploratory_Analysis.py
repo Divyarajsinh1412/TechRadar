@@ -26,6 +26,12 @@ from modules.ui_components import (
     render_callout
 )
 
+def _close_fig(fig):
+    """Lazy close Matplotlib figure to avoid top-level font caching bottleneck on Windows."""
+    if fig is not None:
+        import matplotlib.pyplot as plt
+        plt.close(fig)
+
 st.set_page_config(page_title="Exploratory Analysis — TechRadar", page_icon="📈", layout="wide")
 
 # Inject styling
@@ -103,6 +109,7 @@ with tab_dist:
 
         fig_kde = plot_histogram_kde(df[target_col], title=f"Distribution & KDE Profile: {target_col}", xlabel=target_col)
         st.pyplot(fig_kde)
+        _close_fig(fig_kde)
     else:
         st.info("No numeric columns available.")
 
@@ -114,6 +121,7 @@ with tab_box:
             title="Salary Dispersion across Technology Domains"
         )
         st.pyplot(fig_box)
+        _close_fig(fig_box)
     else:
         st.info("Category and average_salary required for box plot analysis.")
 
@@ -125,6 +133,7 @@ with tab_corr:
         with c_h1:
             fig_heat = plot_correlation_heatmap(corr_matrix, title=f"{corr_method.title()} Correlation Heatmap")
             st.pyplot(fig_heat)
+            _close_fig(fig_heat)
         with c_h2:
             st.markdown("##### Matrix Values:")
             st.dataframe(corr_matrix, use_container_width=True)
@@ -145,5 +154,6 @@ with tab_scatter:
             title=f"Bivariate Regression: {var_y} vs. {var_x}"
         )
         st.pyplot(fig_scat)
+        _close_fig(fig_scat)
     else:
         st.info("At least two numeric features required.")

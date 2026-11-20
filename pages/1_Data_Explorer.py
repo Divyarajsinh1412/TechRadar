@@ -94,19 +94,38 @@ tab_data, tab_types, tab_missing, tab_dups, tab_stats = st.tabs([
 
 with tab_data:
     st.markdown("#### Interactive Dataset View")
-    f_col1, f_col2 = st.columns([3, 1])
+    f_col1, f_col2 = st.columns([2.5, 1.5])
     with f_col1:
         selected_cols = st.multiselect("Visible Columns:", options=list(df.columns), default=list(df.columns))
     with f_col2:
         search_query = st.text_input("Search (any column):", placeholder="e.g. Python, Cloud")
 
-    display_df = df[selected_cols]
+    display_df = df[selected_cols] if selected_cols else df
     if search_query:
         mask = display_df.astype(str).apply(lambda row: row.str.contains(search_query, case=False).any(), axis=1)
         display_df = display_df[mask]
 
-    st.dataframe(display_df, use_container_width=True, height=420)
-    st.caption(f"Showing {len(display_df):,} of {len(df):,} total records.")
+    p_col1, p_col2 = st.columns([1, 1.5])
+    with p_col1:
+        page_size_option = st.selectbox("Rows per page:", [25, 50, 100, 250, "All"], index=1)
+    
+    if page_size_option == "All":
+        paged_df = display_df
+        page_num = 1
+        total_pages = 1
+    else:
+        page_size = int(page_size_option)
+        total_records = len(display_df)
+        import math
+        total_pages = max(1, math.ceil(total_records / page_size))
+        with p_col2:
+            page_num = st.number_input("Page:", min_value=1, max_value=total_pages, value=1, step=1)
+        start_idx = (page_num - 1) * page_size
+        end_idx = min(start_idx + page_size, total_records)
+        paged_df = display_df.iloc[start_idx:end_idx]
+
+    st.dataframe(paged_df, use_container_width=True, height=380)
+    st.caption(f"Showing {len(paged_df):,} records (Page {page_num} of {total_pages}) • Filtered: {len(display_df):,} of {len(df):,} total records.")
 
 with tab_types:
     st.markdown("#### Column Architecture & Data Types (`df.dtypes` & `df.info()`)")

@@ -17,6 +17,20 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import QueuePool, NullPool
 
+try:
+    import streamlit as st
+except ImportError:
+    st = None
+
+def is_streamlit_running() -> bool:
+    """Return True if code is executing inside an active Streamlit runtime session."""
+    if st is None:
+        return False
+    try:
+        return hasattr(st, "runtime") and st.runtime.exists()
+    except Exception:
+        return False
+
 load_dotenv()
 
 logger = logging.getLogger("TechRadar.Database")
@@ -68,6 +82,8 @@ DEFAULT_SOURCES = [
 
 _ENGINE_CACHE: Optional[Engine] = None
 _CUSTOM_ENGINES: Dict[str, Engine] = {}
+_INITIALIZED_DBS = set()
+_SOURCE_STATUS_CACHE: Optional[Tuple[float, pd.DataFrame]] = None
 
 def get_database_url() -> str:
     """
@@ -98,10 +114,47 @@ def is_using_postgres() -> bool:
     url = get_database_url()
     return url.startswith("postgresql://") or url.startswith("postgres://")
 
+if st is not None:
+    @st.cache_resource(show_spinner=False)
+    def _get_st_cached_engine(db_url: str, is_pg: bool) -> Engine:
+        if is_pg:
+            engine = create_engine(
+                db_url,
+                poolclass=QueuePool,
+                pool_size=5,
+                max_overflow=10,
+                pool_timeout=30,
+                pool_pre_ping=True,
+                connect_args={"sslmode": "require"} if "sslmode" not in db_url else {}
+            )
+            logger.info("Initialized Streamlit Cached PostgreSQL Engine connected to cloud database.")
+            return engine
+        else:
+            engine = create_engine(
+                db_url,
+                connect_args={"check_same_thread": False}
+            )
+            logger.info(f"Initialized Streamlit Cached SQLite Engine: {db_url}")
+            return engine
+else:
+    def _get_st_cached_engine(db_url: str, is_pg: bool) -> Engine:
+        return get_db_engine()
+
+def invalidate_db_caches() -> None:
+    """Invalidate Streamlit query data caches when database writes or updates occur."""
+    global _SOURCE_STATUS_CACHE
+    _SOURCE_STATUS_CACHE = None
+    if is_streamlit_running() and st is not None:
+        try:
+            st.cache_data.clear()
+        except Exception:
+            pass
+
 def get_db_engine(db_path: Optional[str] = None) -> Engine:
     """
     Create or return cached SQLAlchemy engine with connection pooling.
     If custom db_path is specified, creates a dedicated SQLite engine.
+    When running under Streamlit, reuses pool via @st.cache_resource.
     """
     global _ENGINE_CACHE, _CUSTOM_ENGINES
     if db_path is not None:
@@ -113,12 +166,16 @@ def get_db_engine(db_path: Optional[str] = None) -> Engine:
             )
         return _CUSTOM_ENGINES[db_path]
 
+    db_url = get_database_url()
+    is_pg = is_using_postgres()
+
+    if is_streamlit_running():
+        return _get_st_cached_engine(db_url, is_pg)
+
     if _ENGINE_CACHE is not None:
         return _ENGINE_CACHE
 
-    db_url = get_database_url()
-
-    if is_using_postgres():
+    if is_pg:
         # Supabase PostgreSQL engine with connection pooling
         _ENGINE_CACHE = create_engine(
             db_url,
@@ -153,11 +210,17 @@ def close_engine(db_path: Optional[str] = None) -> None:
         _ENGINE_CACHE = None
     gc.collect()
 
-def init_database(db_path: Optional[str] = None) -> None:
+def init_database(db_path: Optional[str] = None, force: bool = False) -> None:
     """
     Execute appropriate DDL schema for the active database engine (PostgreSQL or SQLite),
     and initialize default data source operational tracking records.
+    Cached after first run to eliminate 20+ redundant network DDL calls.
     """
+    global _INITIALIZED_DBS
+    db_key = db_path if db_path is not None else get_database_url()
+    if not force and db_key in _INITIALIZED_DBS:
+        return
+
     engine = get_db_engine(db_path=db_path)
     is_pg = is_using_postgres() and db_path is None
     schema_file = POSTGRES_SCHEMA_PATH if is_pg else SQLITE_SCHEMA_PATH
@@ -205,6 +268,7 @@ def init_database(db_path: Optional[str] = None) -> None:
                         "s_refresh": now_iso
                     }
                 )
+    _INITIALIZED_DBS.add(db_key)
 
 # ----------------- Historical Technology Metrics -----------------
 
@@ -236,15 +300,35 @@ def save_metrics_to_db(df: pd.DataFrame, replace: bool = False, db_path: Optiona
             conn.execute(text("DELETE FROM technology_metrics"))
         data_to_save.to_sql("technology_metrics", conn, if_exists="append", index=False)
 
+    invalidate_db_caches()
     return len(data_to_save)
 
-def load_metrics_from_db(db_path: Optional[str] = None) -> pd.DataFrame:
-    """Load historical longitudinal metrics as a Pandas DataFrame."""
-    init_database(db_path=db_path)
-    engine = get_db_engine(db_path=db_path)
-    query = text("SELECT * FROM technology_metrics ORDER BY date ASC, technology ASC")
+def _fetch_metrics(engine: Engine, columns: Optional[List[str]] = None, limit: Optional[int] = None) -> pd.DataFrame:
+    col_str = ", ".join(columns) if columns else "*"
+    limit_clause = f" LIMIT {int(limit)}" if limit and limit > 0 else ""
+    query = text(f"SELECT {col_str} FROM technology_metrics ORDER BY date ASC, technology ASC{limit_clause}")
     with engine.connect() as conn:
         return pd.read_sql_query(query, conn)
+
+if st is not None:
+    @st.cache_data(ttl=600, show_spinner=False)
+    def _cached_load_metrics(columns_tuple: Optional[Tuple[str, ...]], limit: Optional[int]) -> pd.DataFrame:
+        engine = get_db_engine()
+        cols = list(columns_tuple) if columns_tuple else None
+        return _fetch_metrics(engine, columns=cols, limit=limit)
+
+def load_metrics_from_db(columns: Optional[List[str]] = None, limit: Optional[int] = None, db_path: Optional[str] = None) -> pd.DataFrame:
+    """
+    Load historical longitudinal metrics as a Pandas DataFrame.
+    Supports selective column querying and limit clause for high performance.
+    Utilizes @st.cache_data(ttl=600) when running under Streamlit without custom db_path.
+    """
+    if db_path is None and is_streamlit_running() and st is not None:
+        col_tup = tuple(columns) if columns else None
+        return _cached_load_metrics(col_tup, limit)
+
+    engine = get_db_engine(db_path=db_path)
+    return _fetch_metrics(engine, columns=columns, limit=limit)
 
 # ----------------- Unified Live Multi-Period Observations -----------------
 
@@ -312,6 +396,7 @@ def bulk_save_live_observations(observations: List[Dict[str, Any]], db_path: Opt
             """)
             conn.execute(stmt, rows_to_insert)
 
+    invalidate_db_caches()
     return len(rows_to_insert)
 
 def get_live_observations(
@@ -350,12 +435,34 @@ def get_live_observations(
 
 # ----------------- Data Source Status Tracking -----------------
 
+if st is not None:
+    @st.cache_data(ttl=60, show_spinner=False)
+    def _cached_get_source_status() -> pd.DataFrame:
+        engine = get_db_engine()
+        with engine.connect() as conn:
+            return pd.read_sql_query(text("SELECT * FROM data_source_status ORDER BY source_name ASC"), conn)
+
 def get_source_status(db_path: Optional[str] = None) -> pd.DataFrame:
-    """Retrieve operational status and freshness of all data sources."""
-    init_database(db_path=db_path)
+    """Retrieve operational status and freshness of all data sources with in-memory TTL caching."""
+    global _SOURCE_STATUS_CACHE
+    import time
+    now = time.time()
+    if db_path is None and _SOURCE_STATUS_CACHE is not None:
+        cached_time, cached_df = _SOURCE_STATUS_CACHE
+        if now - cached_time < 30.0:
+            return cached_df.copy()
+
+    if db_path is None and is_streamlit_running() and st is not None:
+        res = _cached_get_source_status()
+        _SOURCE_STATUS_CACHE = (now, res)
+        return res
+
     engine = get_db_engine(db_path=db_path)
     with engine.connect() as conn:
-        return pd.read_sql_query(text("SELECT * FROM data_source_status ORDER BY source_name ASC"), conn)
+        res = pd.read_sql_query(text("SELECT * FROM data_source_status ORDER BY source_name ASC"), conn)
+    if db_path is None:
+        _SOURCE_STATUS_CACHE = (now, res)
+    return res
 
 def update_source_status(
     source_id: str,
@@ -384,6 +491,7 @@ def update_source_status(
                 "source_id": source_id
             }
         )
+    invalidate_db_caches()
 
 # ----------------- Scheduled Collection History -----------------
 

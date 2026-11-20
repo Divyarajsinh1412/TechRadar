@@ -9,13 +9,18 @@ import streamlit as st
 import pandas as pd
 from modules.data_loader import load_dataset, get_dataset_metadata
 from modules.opportunity_analysis import calculate_opportunity_scores
-from modules.report_generator import generate_pdf_report
 from modules.ui_components import (
     render_page_header,
     render_sidebar_branding,
     render_sidebar_footer,
     render_callout
 )
+
+@st.cache_data(show_spinner=False)
+def _get_cached_pdf_report(summary_metrics: dict, top_10_df: pd.DataFrame, opportunity_df: pd.DataFrame) -> bytes:
+    """Lazy import and cache PDF report compilation to accelerate page load and interactions."""
+    from modules.report_generator import generate_pdf_report
+    return generate_pdf_report(summary_metrics, top_10_df, opportunity_df)
 
 st.set_page_config(page_title="Reports & Export — TechRadar", page_icon="📄", layout="wide")
 
@@ -91,7 +96,7 @@ with e1:
         unsafe_allow_html=True
     )
     try:
-        pdf_bytes = generate_pdf_report(summary_metrics, top_10, opportunity_df)
+        pdf_bytes = _get_cached_pdf_report(summary_metrics, top_10, opportunity_df)
         st.download_button(
             label="📥 Download Academic PDF Report",
             data=pdf_bytes,
